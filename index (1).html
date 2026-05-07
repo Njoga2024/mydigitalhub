@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ClearView Store - Digital Subscriptions</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- ✅ Paystack SDK -->
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+  <!-- Header -->
+  <header class="bg-white shadow-md p-4 flex justify-between items-center">
+    <h1 class="text-2xl font-bold text-blue-600">ClearView Store</h1>
+    <nav>
+      <a href="#" class="px-4 text-gray-700 hover:text-blue-500">Home</a>
+      <a href="#products" class="px-4 text-gray-700 hover:text-blue-500">Products</a>
+      <a href="#contact" class="px-4 text-gray-700 hover:text-blue-500">Contact</a>
+    </nav>
+  </header>
+
+  <!-- Hero Section -->
+  <main class="p-6">
+    <section class="text-center mb-10">
+      <h2 class="text-3xl font-bold mb-2">Your One-Stop Shop for Digital Products</h2>
+      <p class="text-gray-600">Affordable plans and Secure checkout with multiple payment methods!</p>
+      <p class="text-sm text-gray-500 mt-2">💱 Prices shown in your currency, paid in KES</p>
+    </section>
+
+    <!-- Currency & Country Selector -->
+    <section class="text-center mb-8">
+      <p class="text-gray-700 font-semibold mb-4">Your Location: <span id="location-display" class="text-blue-600 font-bold">Detecting...</span></p>
+      <button onclick="changeCurrency()" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition">
+        Change Currency/Country
+      </button>
+    </section>
+
+    <!-- Payment Method Selector -->
+    <section class="text-center mb-8">
+      <p class="text-gray-700 font-semibold mb-4">Select Your Payment Method:</p>
+      <div id="payment-methods" class="flex flex-wrap justify-center gap-4"></div>
+    </section>
+
+    <!-- Product Grid -->
+    <section id="products" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-6"></section>
+  </main>
+
+  <!-- Footer -->
+  <footer id="contact" class="bg-white p-6 text-center mt-10 border-t">
+    <p class="text-gray-600">Contact us on WhatsApp: <a href="https://wa.me/254781052997" class="text-blue-500 underline">+254781052997</a></p>
+    <p class="text-sm text-gray-400 mt-2">&copy; 2026 ClearView Store</p>
+  </footer>
+
+  <!-- JavaScript -->
+  <script>
+    let currentPaymentMethod = 'paystack';
+    let currentProduct = null;
+    let userCurrency = 'KES';
+    let userCountry = 'KE';
+    let displayCurrency = 'KES'; // Currency to show to user
+    
+    // Exchange rates - base price in KES
+    let exchangeRates = {
+      KES: 1,
+      NGN: 130,
+      GHS: 0.65,
+      UGX: 28.5,
+      TZS: 200,
+      ZAR: 1.1,
+      USD: 0.0077,
+      EUR: 0.0070,
+      GBP: 0.0061,
+      INR: 0.64,
+      CAD: 0.011,
+      AUD: 0.012
+    };
+
+    // Paystack LIVE account only supports these currencies
+    const paystackSupportedCurrencies = ['KES', 'NGN', 'ZAR'];
+
+    const currencyCountryMap = {
+      KE: { currency: 'KES', name: 'Kenya', flag: '🇰🇪' },
+      NG: { currency: 'NGN', name: 'Nigeria', flag: '🇳🇬' },
+      GH: { currency: 'GHS', name: 'Ghana', flag: '🇬🇭' },
+      UG: { currency: 'UGX', name: 'Uganda', flag: '🇺🇬' },
+      TZ: { currency: 'TZS', name: 'Tanzania', flag: '🇹🇿' },
+      ZA: { currency: 'ZAR', name: 'South Africa', flag: '🇿🇦' },
+      US: { currency: 'USD', name: 'United States', flag: '🇺🇸' },
+      GB: { currency: 'GBP', name: 'United Kingdom', flag: '🇬🇧' },
+      DE: { currency: 'EUR', name: 'Germany', flag: '🇩🇪' },
+      IN: { currency: 'INR', name: 'India', flag: '🇮🇳' },
+      FR: { currency: 'EUR', name: 'France', flag: '🇫🇷' },
+      CA: { currency: 'CAD', name: 'Canada', flag: '🇨🇦' },
+      AU: { currency: 'AUD', name: 'Australia', flag: '🇦🇺' }
+    };
+
+    const paymentMethods = {
+      KES: ['paystack', 'mpesa'],
+      NGN: ['paystack'],
+      GHS: ['paystack'],
+      UGX: ['paystack'],
+      TZS: ['paystack'],
+      ZAR: ['paystack'],
+      USD: ['paystack'],
+      EUR: ['paystack'],
+      GBP: ['paystack'],
+      INR: ['paystack'],
+      CAD: ['paystack'],
+      AUD: ['paystack']
+    };
+
+    const products = [
+      {
+        name: 'DSTV Stream',
+        priceKES: 600,
+        description: 'Stream live DSTV channels for 1 month.',
+        image: 'assets/dstv.jpg'
+      },
+      {
+        name: 'Startimes ON',
+        priceKES: 900,
+        description: 'Watch live channels without monthly subscription.',
+        image: 'assets/startimes.jpg'
+      },
+      {
+        name: 'Sports TV',
+        priceKES: 800,
+        description: 'Unlimited sports coverage including EPL, La Liga, and more.',
+        image: 'assets/sports.jpg'
+      },
+      {
+        name: 'Netflix TV',
+        priceKES: 900,
+        description: 'Unlimited access to trending movies and TV series.',
+        image: 'assets/movies.jpg'
+      },
+      {
+        name: 'YouTube Premium',
+        priceKES: 550,
+        description: 'Ad-free YouTube experience with offline viewing.',
+        image: 'assets/youtube.jpg'
+      },
+      {
+        name: 'TikTok 18+',
+        priceKES: 400,
+        description: 'Exclusive access to 18+ content on TikTok.',
+        image: 'assets/tiktok.jpg'
+      }
+    ];
+
+    // Detect user location and currency
+    async function detectLocation() {
+      try {
+        const response = await fetch('https://ipapi.co/json/');
+        const data = await response.json();
+        userCountry = data.country_code;
+        
+        if (currencyCountryMap[userCountry]) {
+          displayCurrency = currencyCountryMap[userCountry].currency;
+        } else {
+          displayCurrency = 'KES';
+        }
+        
+        // Use supported Paystack currency for actual payment
+        userCurrency = paystackSupportedCurrencies.includes(displayCurrency) ? displayCurrency : 'KES';
+        
+        updateLocationDisplay();
+        initializePaymentMethods();
+        renderProducts();
+      } catch (error) {
+        console.log('Location detection failed, using default KES');
+        displayCurrency = 'KES';
+        userCurrency = 'KES';
+        updateLocationDisplay();
+        initializePaymentMethods();
+        renderProducts();
+      }
+    }
+
+    function updateLocationDisplay() {
+      const locationData = currencyCountryMap[userCountry] || { name: 'Your Location', flag: '🌍', currency: displayCurrency };
+      let displayText = `${locationData.flag} ${locationData.name}`;
+      
+      // Show if paying in different currency
+      if (displayCurrency !== userCurrency) {
+        displayText += ` (Showing ${displayCurrency}, paying in ${userCurrency})`;
+      } else {
+        displayText += ` (${userCurrency})`;
+      }
+      
+      document.getElementById('location-display').innerHTML = displayText;
+    }
+
+    function changeCurrency() {
+      const countries = Object.keys(currencyCountryMap);
+      const selectedIndex = prompt('Select your country/currency:\n\n' + countries.map((code, i) => `${i + 1}. ${currencyCountryMap[code].flag} ${currencyCountryMap[code].name} (${currencyCountryMap[code].currency})`).join('\n'));
+      
+      if (selectedIndex && selectedIndex > 0 && selectedIndex <= countries.length) {
+        userCountry = countries[selectedIndex - 1];
+        displayCurrency = currencyCountryMap[userCountry].currency;
+        
+        // Map to supported Paystack currency
+        userCurrency = paystackSupportedCurrencies.includes(displayCurrency) ? displayCurrency : 'KES';
+        
+        updateLocationDisplay();
+        initializePaymentMethods();
+        renderProducts();
+      }
+    }
+
+    function convertPrice(priceKES) {
+      const rate = exchangeRates[displayCurrency] || 1;
+      return Math.round(priceKES * rate);
+    }
+
+    function formatPrice(amount, currency) {
+      const symbols = {
+        KES: 'KES',
+        NGN: '₦',
+        GHS: 'GHS',
+        UGX: 'UGX',
+        TZS: 'TZS',
+        ZAR: 'R',
+        USD: '$',
+        EUR: '€',
+        GBP: '£',
+        INR: '₹',
+        CAD: 'C$',
+        AUD: 'A$'
+      };
+      
+      const symbol = symbols[currency] || currency;
+      
+      if (['KES', 'NGN', 'UGX', 'TZS', 'GHS', 'ZAR'].includes(currency)) {
+        return `${symbol} ${amount.toLocaleString()}`;
+      } else {
+        return `${symbol} ${(amount / 100).toFixed(2)}`;
+      }
+    }
+
+    // Convert to Paystack format
+    function convertToPaystackAmount(priceKES) {
+      // Always convert to payment currency (userCurrency)
+      const rate = exchangeRates[userCurrency] || 1;
+      let amount = Math.round(priceKES * rate);
+      
+      // Paystack expects amount in cents
+      return Math.round(amount * 100);
+    }
+
+    function initializePaymentMethods() {
+      const methods = paymentMethods[displayCurrency] || ['paystack'];
+      const container = document.getElementById('payment-methods');
+      
+      currentPaymentMethod = methods[0];
+      
+      container.innerHTML = methods.map(method => {
+        const methodName = method === 'paystack' ? '🇰🇪 Paystack' : '📱 M-Pesa (Kenya)';
+        const isDefault = method === methods[0];
+        const ringClass = isDefault ? 'ring-4 ring-yellow-400' : '';
+        const bgColor = method === 'paystack' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700';
+        
+        return `
+          <button 
+            onclick="setPaymentMethod('${method}')" 
+            class="px-6 py-2 ${bgColor} text-white rounded-md transition font-semibold ${ringClass}" 
+            id="btn-${method}">
+            ${methodName}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function setPaymentMethod(method) {
+      currentPaymentMethod = method;
+      
+      const methods = paymentMethods[displayCurrency];
+      methods.forEach(m => {
+        const btn = document.getElementById(`btn-${m}`);
+        if (btn) {
+          btn.classList.remove('ring-4', 'ring-yellow-400');
+        }
+      });
+      
+      const selectedBtn = document.getElementById(`btn-${method}`);
+      if (selectedBtn) {
+        selectedBtn.classList.add('ring-4', 'ring-yellow-400');
+      }
+    }
+
+    function createProductCard(product, index) {
+      const displayPrice = convertPrice(product.priceKES);
+      const formattedPrice = formatPrice(displayPrice, displayCurrency);
+      
+      return `
+        <div class="bg-white rounded-lg shadow-md p-4">
+          <img src="${product.image}" alt="${product.name}" class="w-full h-40 object-cover rounded-md mb-2">
+          <h3 class="text-lg font-semibold">${product.name}</h3>
+          <p class="text-sm text-gray-500 mb-2">${formattedPrice}</p>
+          <p class="text-sm mb-4">${product.description}</p>
+          <button onclick="initPayment(${index})" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition">
+            Buy Now
+          </button>
+        </div>
+      `;
+    }
+
+    function renderProducts() {
+      const container = document.getElementById('products');
+      container.innerHTML = products.map((p, i) => createProductCard(p, i)).join('');
+    }
+
+    function initPayment(productIndex) {
+      currentProduct = products[productIndex];
+
+      if (currentPaymentMethod === 'paystack') {
+        payWithPaystack(productIndex);
+      } else if (currentPaymentMethod === 'mpesa') {
+        payWithMPesa(productIndex);
+      }
+    }
+
+    // ===== PAYSTACK INTEGRATION =====
+    function payWithPaystack(productIndex) {
+      const product = products[productIndex];
+      const email = prompt('Please enter your email address:');
+      if (!email) return;
+
+      const paystackAmount = convertToPaystackAmount(product.priceKES);
+      const displayPrice = formatPrice(convertPrice(product.priceKES), displayCurrency);
+      const paymentPrice = formatPrice(Math.round(paystackAmount / 100), userCurrency);
+      
+      console.log({
+        displayCurrency: displayCurrency,
+        displayPrice: displayPrice,
+        paymentCurrency: userCurrency,
+        paystackAmount: paystackAmount,
+        paymentPrice: paymentPrice
+      });
+      
+      const handler = PaystackPop.setup({
+        key: 'pk_live_ef7d34cf55b8a86c1da377997b0705b622c9d0ae',
+        email: email,
+        amount: paystackAmount,
+        currency: userCurrency,
+        ref: 'ref_' + Math.floor((Math.random() * 1000000000) + 1),
+        onClose: function() {
+          alert('Payment window closed.');
+        },
+        callback: function(response) {
+          alert(`Payment successful for ${product.name}!\nShown as: ${displayPrice}\nPaid: ${paymentPrice}\nReference: ${response.reference}`);
+          // Redirect to thank you page after 2 seconds
+          setTimeout(() => {
+            window.location.href = `thank-you.html?product=${encodeURIComponent(product.name)}&email=${encodeURIComponent(email)}`;
+          }, 2000);
+        }
+      });
+      handler.openIframe();
+    }
+
+    // ===== M-PESA INTEGRATION =====
+    function payWithMPesa(productIndex) {
+      const product = products[productIndex];
+      const phone = prompt('Please enter your M-Pesa phone number (format: 254757780414):');
+      if (!phone) return;
+
+      const email = prompt('Please enter your email address:');
+      if (!email) return;
+
+      const displayPrice = formatPrice(convertPrice(product.priceKES), displayCurrency);
+      const kesPrice = formatPrice(product.priceKES, 'KES');
+
+      alert(`M-Pesa payment initiated for ${product.name}!\n\nDisplay Price: ${displayPrice}\nActual Amount (KES): ${kesPrice}\nPhone: ${phone}\n\nYou will receive a prompt on your phone to confirm payment. Please complete the transaction!`);
+      
+      console.log({
+        product: product.name,
+        amount: product.priceKES,
+        currency: 'KES',
+        phone: phone,
+        email: email
+      });
+
+      // Redirect to thank you page after 3 seconds
+      setTimeout(() => {
+        window.location.href = `thank-you.html?product=${encodeURIComponent(product.name)}&email=${encodeURIComponent(email)}`;
+      }, 3000);
+    }
+
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', function() {
+      detectLocation();
+    });
+  </script>
+
+</body>
+</html>

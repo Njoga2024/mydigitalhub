@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Thank You - MyDigitalHub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <div class="bg-white p-8 rounded shadow max-w-lg text-center">
+    <h1 class="text-2xl font-bold text-green-600 mb-4">Thank you for your purchase!</h1>
+    <p id="message" class="text-gray-700 mb-4"></p>
+    <p class="text-sm text-gray-500">A receipt has been or will be sent to the email you provided.</p>
+    <a href="index.html" class="inline-block mt-6 text-blue-500 underline">Back to Home</a>
+  </div>
+
+  <script>
+    function getQueryParam(name) {
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name) || '';
+    }
+    const product = getQueryParam('product');
+    const email = getQueryParam('email');
+
+    const msgEl = document.getElementById('message');
+    if (product && email) {
+      msgEl.textContent = `You have successfully purchased "${product}" using: ${email}`;
+    } else {
+      msgEl.textContent = "Your payment appears successful. If you don't see details here, check your email for confirmation.";
+    }
+  </script>
+</body>
+</html>
