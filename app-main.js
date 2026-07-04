@@ -380,6 +380,19 @@ async function loadTop10Today() {
     const viewport = track?.parentElement;
     if (!track || !viewport) return;
 
+    // ensure viewport is scrollable (fix: was overflow:hidden in CSS)
+    viewport.style.overflowX = 'auto';
+    viewport.style.scrollBehavior = 'smooth';
+    // hide scrollbars where possible
+    viewport.style.msOverflowStyle = 'none';
+    viewport.style.scrollbarWidth = 'none';
+    if (!document.getElementById('top10-scrollbar-style')) {
+      const s = document.createElement('style');
+      s.id = 'top10-scrollbar-style';
+      s.textContent = '.top10-viewport::-webkit-scrollbar{display:none}';
+      document.head.appendChild(s);
+    }
+
     // build nodes
     const fragment = document.createDocumentFragment();
     items.forEach((it, idx) => {
