@@ -368,7 +368,95 @@ function goToPayment() {
   window.location.href = 'pricing.html';
 }
 
+// ── Top 10 Today (hero banner)
+async function loadTop10Today() {
+  try {
+    const res = await fetch(`https://api.themoviedb.org/3/trending/movie/day?api_key=${API_KEY}`);
+    const data = await res.json();
+    const items = (data.results || []).slice(0, 10);
+    if (!items.length) return;
+
+    const track = document.getElementById('top10-track');
+    const viewport = track?.parentElement;
+    if (!track || !viewport) return;
+
+    // build nodes
+    const fragment = document.createDocumentFragment();
+    items.forEach((it, idx) => {
+      const a = document.createElement('a');
+      a.className = 'top10-item';
+      a.href = `watch.html?id=${it.id}&type=movie`;
+
+      const img = document.createElement('img');
+      img.src = it.poster_path ? IMG_W + it.poster_path : (it.backdrop_path ? IMG_W + it.backdrop_path : '');
+      img.alt = it.title || it.name || '';
+      img.loading = 'lazy';
+      a.appendChild(img);
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const title = document.createElement('div');
+      title.className = 'title';
+      title.textContent = it.title || it.name || '';
+      const sub = document.createElement('div');
+      sub.className = 'sub';
+      sub.textContent = `#${idx + 1} · ${(it.release_date || '').slice(0,4) || ''}`;
+      meta.appendChild(title);
+      meta.appendChild(sub);
+      a.appendChild(meta);
+
+      fragment.appendChild(a);
+    });
+
+    // append and duplicate for smooth loop
+    track.innerHTML = '';
+    track.appendChild(fragment);
+    // clone children to create seamless loop
+    const children = Array.from(track.children).map((n) => n.cloneNode(true));
+    children.forEach((c) => track.appendChild(c));
+
+    // set hero background to first item's backdrop (optional)
+    const first = items[0];
+    if (first && first.backdrop_path) {
+      const hero = document.getElementById('hero');
+      if (hero) hero.style.backgroundImage = `url('${IMG_ORIGINAL + first.backdrop_path}')`;
+      const titleEl = document.getElementById('hero-title');
+      if (titleEl) titleEl.innerText = first.title || first.name || titleEl.innerText;
+      const desc = document.getElementById('hero-desc');
+      if (desc) desc.innerText = first.overview || '';
+      const rating = document.getElementById('hero-rating');
+      if (rating) rating.innerText = first.vote_average ? first.vote_average.toFixed(1) : '';
+    }
+
+    // auto-scroll logic
+    let speed = 0.6; // pixels per frame
+    let rafId = null;
+    function step() {
+      viewport.scrollLeft += speed;
+      // reset when we've scrolled half the track (since we duplicated)
+      if (viewport.scrollLeft >= track.scrollWidth / 2) {
+        viewport.scrollLeft = 0;
+      }
+      rafId = requestAnimationFrame(step);
+    }
+
+    // start after images/layout settle
+    setTimeout(() => {
+      if (rafId) cancelAnimationFrame(rafId);
+      step();
+    }, 120);
+
+    // pause on hover
+    viewport.addEventListener('mouseenter', () => { speed = 0; });
+    viewport.addEventListener('mouseleave', () => { speed = 0.6; });
+  } catch (err) {
+    console.warn('Top10 load failed:', err);
+  }
+}
+
 // ── Initialize on page load ──
 window.addEventListener('load', () => {
   renderContinueWatching(getLocalWatchHistory());
+  // load Top 10 banner
+  loadTop10Today();
 });
